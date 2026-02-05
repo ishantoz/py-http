@@ -18,34 +18,41 @@ _HOP_BY_HOP = frozenset([
 
 class Response:
   """
-  Customizable response object. Build it, then send with request.response.rewrite(resp).
+  Response object similar to Web Response API.
+  Body type determines Content-Type automatically.
   
-  Example:
-    resp = Response(200)
-    resp.header("Content-Type", "application/json")
-    resp.body = b'{"ok": true}'
-    request.response.rewrite(resp)
+  Examples:
+    Response({"ok": True})              # JSON, status 200
+    Response({"error": "not found"}, 404)  # JSON with status
+    Response("Hello", 200)              # text/plain
+    Response(b"raw bytes", 200)         # raw bytes, no Content-Type
+    Response({"data": 1}, headers={"X-Custom": "value"})
   """
   
-  def __init__(self, status: int = 200) -> None:
+  def __init__(
+    self,
+    body: Union[dict, list, str, bytes] = b"",
+    status: int = 200,
+    headers: Optional[dict[str, str]] = None
+  ) -> None:
     self.status = status
-    self.headers: dict[str, str] = {}
-    self.body: bytes = b""
+    self.headers: dict[str, str] = headers.copy() if headers else {}
+    
+    # Infer Content-Type from body type
+    if isinstance(body, (dict, list)):
+      self.body = dumps(body).encode("utf-8")
+      if "Content-Type" not in self.headers:
+        self.headers["Content-Type"] = "application/json; charset=utf-8"
+    elif isinstance(body, str):
+      self.body = body.encode("utf-8")
+      if "Content-Type" not in self.headers:
+        self.headers["Content-Type"] = "text/plain; charset=utf-8"
+    else:
+      self.body = body
   
   def header(self, key: str, value: str) -> Response:
     """Set a header. Returns self for chaining."""
     self.headers[key] = value
-    return self
-  
-  def set_body(self, body: Union[str, bytes]) -> Response:
-    """Set body as str or bytes. Returns self for chaining."""
-    self.body = body.encode("utf-8") if isinstance(body, str) else body
-    return self
-  
-  def set_json(self, data: Union[dict, list]) -> Response:
-    """Set body as JSON and Content-Type header. Returns self for chaining."""
-    self.headers["Content-Type"] = "application/json; charset=utf-8"
-    self.body = dumps(data).encode("utf-8")
     return self
 
 
@@ -88,13 +95,12 @@ class ResponseHelper:
 
   def rewrite(self, resp: Response) -> None:
     """
-    Send a custom Response object to the client.
+    Send a Response object to the client.
     
-    Example:
-      resp = Response(200)
-      resp.header("Content-Type", "text/plain")
-      resp.set_body("Hello")
-      request.response.rewrite(resp)
+    Examples:
+      request.response.rewrite(Response({"ok": True}))
+      request.response.rewrite(Response("Hello", 200))
+      request.response.rewrite(Response({"error": "not found"}, 404))
     """
     r = self._request
     r.send_response(resp.status)

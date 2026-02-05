@@ -33,20 +33,12 @@ def fetch(
   try:
     req = Request(url, data=body, headers=req_headers, method=method)
     with urlopen(req, timeout=timeout) as resp:
-      result = Response(resp.status)
-      for key, value in resp.getheaders():
-        if key.lower() not in _HOP_BY_HOP:
-          result.headers[key] = value
-      result.body = resp.read()
-      return result
+      resp_headers = {k: v for k, v in resp.getheaders() if k.lower() not in _HOP_BY_HOP}
+      return Response(resp.read(), resp.status, resp_headers)
   except HTTPError as e:
-    result = Response(e.code)
-    for key, value in e.headers.items():
-      if key.lower() not in _HOP_BY_HOP:
-        result.headers[key] = value
-    result.body = e.read()
-    return result
+    resp_headers = {k: v for k, v in e.headers.items() if k.lower() not in _HOP_BY_HOP}
+    return Response(e.read(), e.code, resp_headers)
   except URLError as e:
-    return Response(502).set_body(f"Bad Gateway: {e.reason}")
+    return Response(f"Bad Gateway: {e.reason}", 502)
   except TimeoutError:
-    return Response(504).set_body("Gateway Timeout")
+    return Response("Gateway Timeout", 504)

@@ -42,24 +42,29 @@ request.response.text("Hello world", status=200)
 request.response.redirect("/new-path", status=302)
 ```
 
-### Custom Response object
+### Response object
 
-Build a response manually, then send it:
+Like the Web Response API - body type determines Content-Type automatically:
 
 ```python
 from lib.response import Response
 
-resp = Response(201)
-resp.header("X-Custom-Header", "value")
-resp.set_json({"created": True})
-request.response.rewrite(resp)
-```
+# JSON (dict/list → application/json)
+request.response.rewrite(Response({"ok": True}))
+request.response.rewrite(Response({"error": "not found"}, 404))
 
-Chaining works too:
+# Text (str → text/plain)
+request.response.rewrite(Response("Hello", 200))
 
-```python
-resp = Response(200).header("X-Foo", "bar").set_body("Hello")
-request.response.rewrite(resp)
+# Raw bytes (no Content-Type)
+request.response.rewrite(Response(b"raw data", 200))
+
+# With custom headers
+request.response.rewrite(Response(
+    {"data": 1},
+    status=201,
+    headers={"X-Custom": "value"}
+))
 ```
 
 ### Fetch and proxy
