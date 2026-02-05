@@ -11,3 +11,17 @@ wheels/
 
 # Database
 *.db
+
+# Video files
+*.mp4
+*.mkv
+*.avi
+*.mov
+*.wmv
+*.flv
+*.webm
+*.mp3
+*.wav
+*.ogg
+*.aac
+*.m4a

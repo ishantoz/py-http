@@ -4,12 +4,13 @@ import traceback
 from lib.error import HttpServerError, default_error_handler
 from lib.helpers.query import parse_path_and_query
 from lib.response import ResponseHelper
+from lib.headers import Headers
 
 
 class HttpServerHandler(http.server.BaseHTTPRequestHandler):
   """Calls the app's handler function(request) for every request.
   Request (self) has:
-    .command, .path (full path with query), .headers, .rfile, .wfile,
+    .command, .path (full path with query), .headers (Headers object), .rfile, .wfile,
     .path_no_query (path only, no query string),
     .query_params (param name -> str or list[str]; arrays only for ?key[]=),
     .response (request.response.html(), .json(), .text(), .redirect()),
@@ -33,6 +34,8 @@ class HttpServerHandler(http.server.BaseHTTPRequestHandler):
         return
       if not self.parse_request():
         return
+      # Convert HTTPMessage to Headers object for universal API
+      self.headers = Headers(self.headers)
       self._set_path_and_query()
       self.handle_request()
       self.wfile.flush()
